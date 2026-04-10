@@ -1,0 +1,88 @@
+import os
+
+from snakebids import bids, generate_inputs, get_wildcard_constraints, set_bids_spec
+import snakebids
+
+# update v15 spec to add template entity
+spec = snakebids.paths.specs.v0_15_0()
+tpl_spec = spec[0].copy()
+tpl_spec["entity"] = "template"
+tpl_spec["tag"] = "tpl"
+spec.insert(0, tpl_spec)
+set_bids_spec(spec)
+
+
+configfile: "config/snakebids.yml"
+
+
+# use expandvars so we can use e.g. '$SLURM_TMPDIR'
+root = os.path.expandvars(config["root"])
+
+
+# Get input wildcards
+inputs = generate_inputs(
+    bids_dir=config["bids_dir"],
+    pybids_inputs=config["pybids_inputs"],
+    pybidsdb_dir=config.get("pybidsdb_dir"),
+    pybidsdb_reset=config.get("pybidsdb_reset"),
+    derivatives=config.get("derivatives", None),
+    participant_label=config.get("participant_label", None),
+    exclude_participant_label=config.get("exclude_participant_label", None),
+    validate=not config.get("plugins.validator.skip", False),
+)
+
+
+if "mri" in inputs:
+    suffixes = inputs["mri"].entities["suffix"]
+    if len(suffixes) == 1:
+        mri_suffix = suffixes[0]
+    else:
+        raise ValueError(
+            f"More than one MRI suffix found, use --filter-mri to narrow your search: {suffixes}"
+        )
+else:
+    mri_suffix = "T2w"
+
+
+
+
+template = config["templates"][config["template"]]
+
+# atlas segmentations to use
+
+if config["atlas_segs"] is None:
+    atlas_segs = template.get("default_segs", template["atlases"].keys())
+else:
+    atlas_segs = []
+    for seg in config["atlas_segs"]:
+        if seg not in template["atlases"]:
+            raise ValueError(
+                f"Chosen segmentation {seg} was not found in the template {template}"
+            )
+        else:
+            atlas_segs.append(seg)
+
+
+#preproc mri and brainmask
+rule all:
+    input:
+        inputs["mri"].expand(
+            bids(
+            root=root,
+            datatype="anat",
+            desc="preproc",
+            suffix=f"{mri_suffix}.nii.gz",
+            **inputs.subj_wildcards,
+        )),
+        inputs["mri"].expand(
+            bids(
+            root=root,
+            datatype="anat",
+            desc="brain",
+            suffix=f"{mri_suffix}.nii.gz",
+            **inputs.subj_wildcards,
+        ))
+
+include: "rules/common.smk"
+include: "rules/import.smk"
+include: "rules/preproc_mri.smk"

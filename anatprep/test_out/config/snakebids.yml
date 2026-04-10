@@ -1,0 +1,201 @@
+plugins.version.version: 0.1.0
+analysis_levels:
+- participant
+targets_by_analysis_level:
+  participant: &id001
+  - all
+pybids_inputs:
+  mri:
+    filters:
+      suffix: T2starw
+      extension: nii.gz
+      datatype: anat
+      reconstruction: avgecho
+    wildcards:
+    - subject
+    - session
+    - acquisition
+    - run
+    - reconstruction
+    - suffix
+    - extension
+parse_args:
+  --work_dir:
+    help: "Local path to use for temporary files\n"
+    type: str
+    dest: work
+    default:
+  --template:
+    help: "Template to use for SPIM registration\n"
+    default: ABAv3
+    choices:
+    - ABAv3
+    - DSURQE
+    - gubra
+    - MBMv3
+    - turone
+  --atlas_segs:
+    help: 'Atlas segmentations to use with the chosen template (default: predefined
+      list or all)'
+    default:
+    action: store
+    nargs: +
+  --template_crop:
+    help: 'Crop template along X-axis to retain specific hemisphere for registration
+      (default: %(default)s)'
+    choices:
+    - left
+    - right
+    default:
+  --template_mri:
+    help: "Template to use for MRI registration to obtain brain mask\n"
+    default: MouseIn
+    choices:
+    - MouseIn
+    - DSURQE
+    - MBMv3
+    - turone
+  --mri_resample_percent:
+    help: 'Resampling factor for multi-MRI averaging to create super-resolved images,
+      as a percent (default: %(default)s). Use 200 for upsampling to twice the resolution'
+    default: 100
+  --sloppy:
+    help: Use low-quality parameters for speed (USE FOR TESTING ONLY)
+    action: store_true
+    default: false
+  --skip-bids-validation:
+    help: "Skip validation of BIDS dataset. BIDS validation is performed by\ndefault
+      using the bids-validator plugin (if installed/enabled) or with the pybids\n\
+      validator implementation (if bids-validator is not installed/enabled).\n"
+    dest: plugins.validator.skip
+    action: store_true
+    default: false
+templates:
+  ABAv3:
+    anat: https://zenodo.org/records/18906782/files/tpl-ABAv3_anat.nii.gz
+    mask: 
+      https://zenodo.org/records/18906782/files/tpl-ABAv3_desc-brain_mask.nii.gz
+    spim_templates:
+      YoPro: 
+        https://zenodo.org/records/18749025/files/tpl-ABAv3_level-5_stain-YoPro_SPIM.nii.gz
+      Iba1: 
+        https://zenodo.org/records/18749025/files/tpl-ABAv3_level-5_stain-Iba1_SPIM.nii.gz
+      Abeta: 
+        https://zenodo.org/records/18749025/files/tpl-ABAv3_level-5_stain-Abeta_SPIM.nii.gz
+    default_segs:
+    - all
+    - coarse
+    - mid
+    - fine
+    atlases:
+      all:
+        dseg: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-all_dseg.nii.gz
+        tsv: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-all_dseg.tsv
+      allsym:
+        dseg: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-allsym_dseg.nii.gz
+        tsv: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-allsym_dseg.tsv
+      coarse:
+        dseg: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-coarse_dseg.nii.gz
+        tsv: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-coarse_dseg.tsv
+      mid:
+        dseg: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-mid_dseg.nii.gz
+        tsv: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-mid_dseg.tsv
+      fine:
+        dseg: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-fine_dseg.nii.gz
+        tsv: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-fine_dseg.tsv
+      roi22:
+        dseg: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-roi22_dseg.nii.gz
+        tsv: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-roi22_dseg.tsv
+      roi82:
+        dseg: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-roi82_dseg.nii.gz
+        tsv: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-roi82_dseg.tsv
+      roi198:
+        dseg: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-roi198_dseg.nii.gz
+        tsv: 
+          https://zenodo.org/records/18906782/files/tpl-ABAv3_seg-roi198_dseg.tsv
+  MouseIn:
+    anat: tpl-MouseIn/tpl-MouseIn_res-1_inv-1_MP2RAGE.nii.gz
+    mask: tpl-MouseIn/tpl-MouseIn_res-1_desc-brain_mask.nii.gz
+  MBMv3:
+    anat: tpl-MBMv3/tpl-MBMv3_T2w.nii.gz
+    mask: tpl-MBMv3/tpl-MBMv3_desc-brain_mask.nii.gz
+    atlases:
+      paxinos:
+        dseg: tpl-MBMv3/tpl-MBMv3_seg-paxinos_dseg.nii.gz
+        tsv: tpl-MBMv3/tpl-MBMv3_seg-paxinos_dseg.tsv
+  turone:
+    anat: tpl-turone/tpl-turone_T2w.nii.gz
+    atlases:
+      all:
+        dseg: tpl-turone/tpl-turone_seg-all_dseg.nii.gz
+        tsv: tpl-turone/tpl-turone_seg-all_dseg.tsv
+  DSURQE:
+    anat: 
+      https://www.mouseimaging.ca/repo/DSURQE_40micron/Dorr_2008_Steadman_2013_Ullmann_2013_Richards_2011_Qiu_2016_Egan_2015_40micron/nifti/DSURQE_40micron_average.nii
+    mask: 
+      https://www.mouseimaging.ca/repo/DSURQE_40micron/Dorr_2008_Steadman_2013_Ullmann_2013_Richards_2011_Qiu_2016_Egan_2015_40micron/nifti/DSURQE_40micron_mask.nii
+    atlases:
+      all:
+        dseg: 
+          https://www.mouseimaging.ca/repo/DSURQE_40micron/Dorr_2008_Steadman_2013_Ullmann_2013_Richards_2011_Qiu_2016_Egan_2015_40micron/nifti/DSURQE_40micron_labels.nii
+        custom_csv: 
+          https://www.mouseimaging.ca/repo/DSURQE_40micron/Dorr_2008_Steadman_2013_Ullmann_2013_Richards_2011_Qiu_2016_Egan_2015_40micron/mappings/DSURQE_40micron_R_mapping.csv
+        tsv: tpl-DSURQE/seg-all_tpl-DSURQE_dseg.tsv
+templatereg:
+  desc: N4brain
+  zooms:
+  - 40
+reg_mri:
+  rigidgreedy:
+    iters: 100x100x50
+    gradsigma: 3
+    warpsigma: 3
+    radius: 2x2x2
+  greedy:
+    dof: 12
+    iters: 100x100x50x0
+    gradsigma: 3
+    warpsigma: 3
+    radius: 2x2x2
+snakemake_args:
+- -np
+pybidsdb_reset: false
+pybidsdb_dir:
+pybids_db_dir:
+pybids_db_reset: <!DEPRECATED!>0<!DEPRECATED!>
+snakemake_target: *id001
+work:
+template: ABAv3
+atlas_segs:
+template_crop:
+template_mri: DSURQE
+mri_resample_percent: 100
+sloppy: false
+plugins.validator.skip: false
+bids_dir: /nfs/trident3/mri/prado/ki3/bids
+output_dir: /local/scratch/SPIMquant_testmri/anatprep/test_out
+analysis_level: participant
+participant_label:
+exclude_participant_label:
+derivatives: false
+snakemake_version: 9.19.0
+snakebids_version: 0.15.0
+root: ''
+app_version: 0.1.0
+snakemake_dir: /local/scratch/SPIMquant_testmri/anatprep
+snakefile: /local/scratch/SPIMquant_testmri/anatprep/workflow/Snakefile
