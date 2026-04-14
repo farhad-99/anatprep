@@ -97,3 +97,4 @@ quality_fix = "isort --profile black anatprep/*.py && black anatprep  && snakefm
 
 [tool.pixi.dependencies]
 pip = ">=25.3,<26"
+convert3d = ">=1.4.2,<2"

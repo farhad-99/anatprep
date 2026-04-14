@@ -17,7 +17,7 @@ targets_by_analysis_level:
 pybids_inputs:
   mri:
     filters:
-      suffix: 'T2w'
+      suffix: 'T2starw'
       extension: 'nii.gz'
       datatype: 'anat'
     wildcards:
@@ -28,6 +28,7 @@ pybids_inputs:
       - reconstruction
       - suffix
       - extension
+
 
 
 #configuration for the command-line parameters to make available
