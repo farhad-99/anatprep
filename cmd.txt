@@ -1,0 +1,1 @@
+pixi run anatprep /nfs/prado/khan/trainees/ffllahz/ki3/bids/ /nfs/khan/trainees/ffallahz/ki3/derivatives/anatprep8/ participant --filter_mri reconstruction:match=avgecho --template_mri DSURQE --cores all

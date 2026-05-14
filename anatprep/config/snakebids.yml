@@ -154,8 +154,10 @@ templates:
         tsv: 'tpl-turone/tpl-turone_seg-all_dseg.tsv'
 
   DSURQE:
-    anat: https://www.mouseimaging.ca/repo/DSURQE_40micron/Dorr_2008_Steadman_2013_Ullmann_2013_Richards_2011_Qiu_2016_Egan_2015_40micron/nifti/DSURQE_40micron_average.nii
-    mask: https://www.mouseimaging.ca/repo/DSURQE_40micron/Dorr_2008_Steadman_2013_Ullmann_2013_Richards_2011_Qiu_2016_Egan_2015_40micron/nifti/DSURQE_40micron_mask.nii
+    #anat: https://www.mouseimaging.ca/repo/DSURQE_40micron/Dorr_2008_Steadman_2013_Ullmann_2013_Richards_2011_Qiu_2016_Egan_2015_40micron/nifti/DSURQE_40micron_average.nii
+    anat: '/nfs/khan/trainees/ffallahz/ki3/bids/tpl-DSURQE/tpl-DSURQE_anat.nii.gz'
+    mask: '/nfs/khan/trainees/ffallahz/ki3/bids/tpl-DSURQE/tpl-DSURQE_desc-brain_mask.nii.gz'
+    #mask: https://www.mouseimaging.ca/repo/DSURQE_40micron/Dorr_2008_Steadman_2013_Ullmann_2013_Richards_2011_Qiu_2016_Egan_2015_40micron/nifti/DSURQE_40micron_mask.nii
     atlases:
       all: 
         dseg: https://www.mouseimaging.ca/repo/DSURQE_40micron/Dorr_2008_Steadman_2013_Ullmann_2013_Richards_2011_Qiu_2016_Egan_2015_40micron/nifti/DSURQE_40micron_labels.nii

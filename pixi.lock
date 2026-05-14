@@ -20,6 +20,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-doc-0.0.4-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/antlr-python-runtime-4.9.3-pyhd8ed1ab_1.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/ants-2.6.5-h5f726e6_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/antspyx-0.6.1-py312h0a12c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/anyio-4.13.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/aom-3.9.1-hac33072_0.conda
@@ -567,6 +568,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-doc-0.0.4-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/antlr-python-runtime-4.9.3-pyhd8ed1ab_1.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/ants-2.6.5-h5f726e6_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/antspyx-0.6.1-py312h0a12c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/anyio-4.13.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/aom-3.9.1-hac33072_0.conda
@@ -1171,6 +1173,7 @@ environments:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/ants-2.6.5-h5f726e6_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/anyio-4.13.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/argon2-cffi-25.1.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/argon2-cffi-bindings-25.1.0-py312h4c3975b_2.conda
@@ -1377,6 +1380,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-doc-0.0.4-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/antlr-python-runtime-4.9.3-pyhd8ed1ab_1.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/ants-2.6.5-h5f726e6_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/antspyx-0.6.1-py312h0a12c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/anyio-4.13.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/aom-3.9.1-hac33072_0.conda
@@ -2063,7 +2067,7 @@ packages:
 - pypi: ./
   name: anatprep
   version: 0.1.0
-  sha256: d06e0e98ee3fb740da04d562a0d90f447417fca8cd9742d9f42d3c0feeceede8
+  sha256: 6895fb384f774a71b1fc87238db87820eabdbe0d6591253b3b8e0efa55bb46ce
   requires_python: '>=3.11'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-doc-0.0.4-pyhcf101f3_0.conda
@@ -2101,6 +2105,20 @@ packages:
   - pkg:pypi/antlr4-python3-runtime?source=hash-mapping
   size: 101065
   timestamp: 1638309284042
+- conda: https://conda.anaconda.org/conda-forge/linux-64/ants-2.6.5-h5f726e6_0.conda
+  sha256: cf5e88eebb20bc6310f2d7c6d3c9c3f77fb01e31514eae4e3adb5182cdd3a26f
+  md5: 956f9e0afb636bca5710ea6df5c716a2
+  depends:
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=14
+  - libitk >=5.4,<5.5.0a0
+  - libitk >=5.4.5,<5.5.0a0
+  - libstdcxx >=14
+  license: Apache-2.0
+  license_family: APACHE
+  purls: []
+  size: 40489470
+  timestamp: 1768856374598
 - conda: https://conda.anaconda.org/conda-forge/linux-64/antspyx-0.6.1-py312h0a12c72_0.conda
   sha256: 2eef0e6b65fd7ebd561838ed970494b3a9214c7c264142621f836c370d73769a
   md5: 8ad7cc016e0b15549e667b9c58b92cab

@@ -130,7 +130,7 @@ rule register_mri_to_first:
                 **inputs.subj_wildcards,
             )
         ),
-    threads: 8
+    threads: 48 
     resources:
         mem_mb=8000,
         runtime=10,
@@ -172,7 +172,7 @@ rule resample_mri_to_first:
                 **inputs.subj_wildcards,
             )
         ),
-    threads: 8
+    threads: 48 #
     conda:
         "../envs/c3d.yaml"
     resources:
@@ -209,7 +209,7 @@ rule average_mri:
             suffix=f"{mri_suffix}.nii.gz",
             **inputs.subj_wildcards,
         ),
-    threads: 8
+    threads: 48 #
     resources:
         mem_mb=1500,
         runtime=15,
@@ -217,6 +217,9 @@ rule average_mri:
         "../envs/c3d.yaml"
     shell:
         "c3d {input.resampled_images} -accum -add -endaccum -o {output.nii}"
+
+
+# 
 
 
 rule rigid_nlin_reg_mri_to_template:
@@ -238,13 +241,20 @@ rule rigid_nlin_reg_mri_to_template:
             suffix=f"{mri_suffix}.nii.gz",
             **inputs.subj_wildcards,
         ),
+        # subject=bids(
+        #     root=root,
+        #     datatype="anat",
+        #     desc="preprocRAS",
+        #     suffix=f"{mri_suffix}.nii.gz",
+        #     **inputs.subj_wildcards,
+        # ),
     params:
         iters="{iters}",  #"100x50x50",
         metric="NCC {radius}",  #3x3x3",
         sigma1="{gradsigma}vox",  #3
         sigma2="{warpsigma}vox",  #2
     output:
-        xfm_ras=temp(
+        xfm_ras=#temp(
             bids(
                 root=root,
                 datatype="xfm",
@@ -258,9 +268,9 @@ rule rigid_nlin_reg_mri_to_template:
                 gradsigma="{gradsigma}",
                 warpsigma="{warpsigma}",
                 **inputs.subj_wildcards,
-            )
+            #)
         ),
-        warp=temp(
+        warp=#temp(
             bids(
                 root=root,
                 datatype="xfm",
@@ -272,9 +282,9 @@ rule rigid_nlin_reg_mri_to_template:
                 gradsigma="{gradsigma}",
                 warpsigma="{warpsigma}",
                 **inputs.subj_wildcards,
-            )
+            #)
         ),
-        invwarp=temp(
+        invwarp=#temp(
             bids(
                 root=root,
                 datatype="xfm",
@@ -286,9 +296,9 @@ rule rigid_nlin_reg_mri_to_template:
                 gradsigma="{gradsigma}",
                 warpsigma="{warpsigma}",
                 **inputs.subj_wildcards,
-            )
+            #)
         ),
-        warped=temp(
+        warped=#temp(
             bids(
                 root=root,
                 datatype="xfm",
@@ -300,9 +310,9 @@ rule rigid_nlin_reg_mri_to_template:
                 gradsigma="{gradsigma}",
                 warpsigma="{warpsigma}",
                 **inputs.subj_wildcards,
-            )
+            #)
         ),
-    threads: 32
+    threads: 48
     resources:
         mem_mb=1500,
         runtime=15,
@@ -383,7 +393,7 @@ rule transform_template_mask_to_mri:
             **inputs.subj_wildcards,
         ),
     output:
-        mask=temp(
+        mask=#temp(
             bids(
                 root=root,
                 datatype="anat",
@@ -394,11 +404,11 @@ rule transform_template_mask_to_mri:
                 gradsigma="{gradsigma}",
                 warpsigma="{warpsigma}",
                 **inputs.subj_wildcards,
-            )
+            #)
         ),
     shadow:
         "minimal"
-    threads: 32
+    threads: 48
     resources:
         mem_mb=1500,
         runtime=15,
