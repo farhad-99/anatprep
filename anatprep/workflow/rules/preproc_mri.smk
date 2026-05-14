@@ -220,14 +220,11 @@ rule average_mri:
 
 
 rule rigid_nlin_reg_mri_to_template:
-    """Initial unmasked MRI to unmasked template MRI using rigid + 
-    deformable registration.
-    
-    Performs initial rigid (6 DOF) alignment followed by deformable
-    registration to align non-brain-masked  MRI with similarly
-    non-brain-masked MRI, so that the template brain mask can be
-    propagated. Note: this step could be replaced by a ML-based 
-    brain-masking if a suitable model is found/trained.
+    """Register unmasked MRI to unmasked template MRI using ANTs (rigid + affine + SyN).
+
+    Performs rigid, affine, and symmetric diffeomorphic normalization (SyN) to
+    align subject MRI with the template so that the template brain mask can be
+    propagated back to subject space.
     """
     input:
         template=bids(root=root, template="{template}", suffix="anat.nii.gz"),
@@ -239,20 +236,16 @@ rule rigid_nlin_reg_mri_to_template:
             **inputs.subj_wildcards,
         ),
     params:
-        iters="{iters}",  #"100x50x50",
-        metric="NCC {radius}",  #3x3x3",
-        sigma1="{gradsigma}vox",  #3
-        sigma2="{warpsigma}vox",  #2
+        prefix="ants_",
     output:
-        xfm_ras=temp(
+        affine=temp(
             bids(
                 root=root,
                 datatype="xfm",
                 from_=f"{mri_suffix}",
                 to="{template}",
-                type_="ras",
                 desc="rigid",
-                suffix="xfm.txt",
+                suffix="0GenericAffine.mat",
                 iters="{iters}",
                 radius="{radius}",
                 gradsigma="{gradsigma}",
@@ -266,7 +259,7 @@ rule rigid_nlin_reg_mri_to_template:
                 datatype="xfm",
                 from_=f"{mri_suffix}",
                 to="{template}",
-                suffix="warp.nii.gz",
+                suffix="1Warp.nii.gz",
                 iters="{iters}",
                 radius="{radius}",
                 gradsigma="{gradsigma}",
@@ -280,7 +273,7 @@ rule rigid_nlin_reg_mri_to_template:
                 datatype="xfm",
                 from_="{template}",
                 to=f"{mri_suffix}",
-                suffix="warp.nii.gz",
+                suffix="1InverseWarp.nii.gz",
                 iters="{iters}",
                 radius="{radius}",
                 gradsigma="{gradsigma}",
@@ -302,22 +295,44 @@ rule rigid_nlin_reg_mri_to_template:
                 **inputs.subj_wildcards,
             )
         ),
+    shadow:
+        "minimal"
     threads: workflow.cores
     resources:
-        mem_mb=1500,
-        runtime=15,
+        mem_mb=8000,
+        runtime=60,
     conda:
-        "../envs/c3d.yaml"
+        "../envs/ants.yaml"
     shell:
-        "greedy -threads {threads} -d 3 -i {input.template} {input.subject} "
-        " -a -dof 6 -ia-image-centers -m {params.metric} -o {output.xfm_ras} && "
-        "greedy -threads {threads} -d 3 -i {input.template} {input.subject} "
-        " -it {output.xfm_ras} -m {params.metric} "
-        " -oinv {output.invwarp} "
-        " -o {output.warp} -n {params.iters} -s {params.sigma1} {params.sigma2} && "
-        " greedy -threads {threads} -d 3 -rf {input.template} "
-        "  -rm {input.subject} {output.warped} "
-        "  -r {output.warp} {output.xfm_ras} "
+        "antsRegistration"
+        " --num-threads {threads}"
+        " --dimensionality 3"
+        " --float 0"
+        " --output ['{params.prefix}','{params.prefix}Warped.nii.gz']"
+        " --interpolation Linear"
+        " --use-histogram-matching 0"
+        " --winsorize-image-intensities [0.005,0.995]"
+        " --initial-moving-transform ['{input.template}','{input.subject}',1]"
+        " --transform Rigid[0.1]"
+        " --metric MI['{input.template}','{input.subject}',1,32,Regular,0.25]"
+        " --convergence [1000x500x250x100,1e-6,10]"
+        " --shrink-factors 8x4x2x1"
+        " --smoothing-sigmas 3x2x1x0vox"
+        " --transform Affine[0.1]"
+        " --metric MI['{input.template}','{input.subject}',1,32,Regular,0.25]"
+        " --convergence [1000x500x250x100,1e-6,10]"
+        " --shrink-factors 8x4x2x1"
+        " --smoothing-sigmas 3x2x1x0vox"
+        " --transform SyN[0.1,3,0]"
+        " --metric CC['{input.template}','{input.subject}',1,4]"
+        " --convergence [100x70x50x20,1e-6,10]"
+        " --shrink-factors 8x4x2x1"
+        " --smoothing-sigmas 3x2x1x0vox"
+        " -v 1 &&"
+        " mv {params.prefix}0GenericAffine.mat {output.affine} &&"
+        " mv {params.prefix}1Warp.nii.gz {output.warp} &&"
+        " mv {params.prefix}1InverseWarp.nii.gz {output.invwarp} &&"
+        " mv {params.prefix}Warped.nii.gz {output.warped}"
 
 
 rule all_tune_mri_mask:
@@ -356,14 +371,13 @@ rule transform_template_mask_to_mri:
             suffix=f"{mri_suffix}.nii.gz",
             **inputs.subj_wildcards,
         ),
-        xfm_ras=bids(
+        affine=bids(
             root=root,
             datatype="xfm",
             from_=f"{mri_suffix}",
             to=config["template_mri"],
-            type_="ras",
             desc="rigid",
-            suffix="xfm.txt",
+            suffix="0GenericAffine.mat",
             iters="{iters}",
             radius="{radius}",
             gradsigma="{gradsigma}",
@@ -375,7 +389,7 @@ rule transform_template_mask_to_mri:
             datatype="xfm",
             from_=config["template_mri"],
             to=f"{mri_suffix}",
-            suffix="warp.nii.gz",
+            suffix="1InverseWarp.nii.gz",
             iters="{iters}",
             radius="{radius}",
             gradsigma="{gradsigma}",
@@ -396,19 +410,21 @@ rule transform_template_mask_to_mri:
                 **inputs.subj_wildcards,
             )
         ),
-    shadow:
-        "minimal"
     threads: workflow.cores
     resources:
         mem_mb=1500,
         runtime=15,
     conda:
-        "../envs/c3d.yaml"
+        "../envs/ants.yaml"
     shell:
-        " c3d_affine_tool {input.xfm_ras} -inv -o inv_rigid.txt && "
-        " greedy -threads {threads} -d 3 -ri NN -rf {input.ref} "
-        "  -rm {input.mask} {output.mask} "
-        "  -r inv_rigid.txt {input.invwarp}"
+        "antsApplyTransforms"
+        " --dimensionality 3"
+        " --interpolation NearestNeighbor"
+        " --input {input.mask}"
+        " --reference-image {input.ref}"
+        " --output {output.mask}"
+        " --transform [{input.affine},1]"
+        " --transform {input.invwarp}"
 
 
 rule apply_mri_brain_mask:
