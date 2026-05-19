@@ -69,6 +69,20 @@ pixi run anatprep /data/bids /data/out participant \
     --participant-label 01 02 03 --cores all
 ```
 
+### Multi-echo datasets
+
+If your dataset contains individual echo images (`echo-1`, `echo-2`, …) alongside a reconstructed magnitude image (`rec-*`), the pipeline uses the reconstructed files by default (`echo: false` filter in the config). If you need to override this and select a specific echo instead, pass `--filter_mri` at runtime:
+
+```bash
+# Use only echo-1 images
+pixi run anatprep /data/bids /data/out participant \
+    --filter_mri echo=1 --cores all
+
+# Use only a specific reconstruction
+pixi run anatprep /data/bids /data/out participant \
+    --filter_mri reconstruction=preproc --cores all
+```
+
 ---
 
 ## Key options
