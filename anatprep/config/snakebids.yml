@@ -20,7 +20,7 @@ pybids_inputs:
       suffix: 'T2starw'
       extension: 'nii.gz'
       datatype: 'anat'
-      echo: false   # exclude individual echo images; use reconstructed (rec-*) files only
+      reconstruction: 'avgecho'
     wildcards:
       - subject
       - session
