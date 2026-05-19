@@ -54,19 +54,23 @@ pixi run anatprep <bids_dir> <output_dir> participant [options]
 
 ```bash
 pixi run anatprep /data/myproject/bids /data/myproject/anatprep participant \
-    --cores all
+    --use-conda --cores all
 ```
+
+> **`--use-conda` is required.** Each rule runs inside its own conda environment
+> (`ants`, `c3d`). Without this flag Snakemake ignores those environments and
+> tools like `N4BiasFieldCorrection` will not be found.
 
 ### Specify subjects or sessions
 
 ```bash
 # Single subject
 pixi run anatprep /data/bids /data/out participant \
-    --participant-label 01 --cores all
+    --use-conda --participant-label 01 --cores all
 
 # Multiple subjects
 pixi run anatprep /data/bids /data/out participant \
-    --participant-label 01 02 03 --cores all
+    --use-conda --participant-label 01 02 03 --cores all
 ```
 
 ### Multi-echo datasets
@@ -76,11 +80,11 @@ If your dataset contains individual echo images (`echo-1`, `echo-2`, …) alongs
 ```bash
 # Use only echo-1 images
 pixi run anatprep /data/bids /data/out participant \
-    --filter_mri echo=1 --cores all
+    --use-conda --filter_mri echo=1 --cores all
 
 # Use only a specific reconstruction
 pixi run anatprep /data/bids /data/out participant \
-    --filter_mri reconstruction=preproc --cores all
+    --use-conda --filter_mri reconstruction=preproc --cores all
 ```
 
 ---
@@ -93,7 +97,7 @@ pixi run anatprep /data/bids /data/out participant \
 
 ```bash
 pixi run anatprep /data/bids /data/out participant \
-    --template ABAv3 --cores all
+    --use-conda --template ABAv3 --cores all
 ```
 
 Available templates: `ABAv3`, `DSURQE`, `gubra`, `MBMv3`, `turone`
@@ -104,7 +108,7 @@ Available templates: `ABAv3`, `DSURQE`, `gubra`, `MBMv3`, `turone`
 
 ```bash
 pixi run anatprep /data/bids /data/out participant \
-    --template_mri MouseIn --cores all
+    --use-conda --template_mri MouseIn --cores all
 ```
 
 Available: `MouseIn`, `DSURQE`, `MBMv3`, `turone`
@@ -115,7 +119,7 @@ If multiple MRI runs exist per subject, they are rigidly aligned and averaged. U
 
 ```bash
 pixi run anatprep /data/bids /data/out participant \
-    --mri_resample_percent 200 --cores all
+    --use-conda --mri_resample_percent 200 --cores all
 ```
 
 ### Hemisphere cropping
@@ -124,7 +128,7 @@ Crop the template along the X-axis to a single hemisphere:
 
 ```bash
 pixi run anatprep /data/bids /data/out participant \
-    --template_crop left --cores all
+    --use-conda --template_crop left --cores all
 ```
 
 ### Working directory
@@ -133,14 +137,14 @@ Redirect temporary files to a fast local disk:
 
 ```bash
 pixi run anatprep /data/bids /data/out participant \
-    --work_dir /scratch/tmp --cores all
+    --use-conda --work_dir /scratch/tmp --cores all
 ```
 
 ### Skip BIDS validation
 
 ```bash
 pixi run anatprep /data/bids /data/out participant \
-    --skip-bids-validation --cores all
+    --use-conda --skip-bids-validation --cores all
 ```
 
 ---
@@ -151,6 +155,7 @@ The pipeline uses Snakemake and supports SLURM out of the box.
 
 ```bash
 pixi run anatprep /data/bids /data/out participant \
+    --use-conda \
     --executor slurm \
     --default-resources slurm_account=myaccount mem_mb=8000 runtime=60 \
     --cores all \
@@ -165,7 +170,7 @@ Preview the jobs Snakemake would execute without running anything:
 
 ```bash
 pixi run anatprep /data/bids /data/out participant \
-    --cores all --dry-run
+    --use-conda --cores all --dry-run
 ```
 
 ---
@@ -176,7 +181,7 @@ Use `--sloppy` to run faster with reduced registration quality (for pipeline tes
 
 ```bash
 pixi run anatprep /data/bids /data/out participant \
-    --sloppy --cores all
+    --use-conda --sloppy --cores all
 ```
 
 ---
