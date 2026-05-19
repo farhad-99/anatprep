@@ -130,7 +130,7 @@ rule register_mri_to_first:
                 **inputs.subj_wildcards,
             )
         ),
-    threads: 48 
+    threads: workflow.cores
     resources:
         mem_mb=8000,
         runtime=10,
@@ -172,7 +172,7 @@ rule resample_mri_to_first:
                 **inputs.subj_wildcards,
             )
         ),
-    threads: 48 #
+    threads: workflow.cores
     conda:
         "../envs/c3d.yaml"
     resources:
@@ -209,7 +209,7 @@ rule average_mri:
             suffix=f"{mri_suffix}.nii.gz",
             **inputs.subj_wildcards,
         ),
-    threads: 48 #
+    threads: workflow.cores
     resources:
         mem_mb=1500,
         runtime=15,
@@ -273,7 +273,7 @@ rule rigid_nlin_reg_mri_to_template:
             suffix=f"{mri_suffix}.nii.gz",
             **inputs.subj_wildcards,
         ),
-    threads: 48
+    threads: workflow.cores
     resources:
         mem_mb=8000,
         runtime=60,
@@ -358,7 +358,7 @@ rule transform_template_mask_to_mri:
             suffix="mask.nii.gz",
             **inputs.subj_wildcards,
         ),
-    threads: 48
+    threads: workflow.cores
     resources:
         mem_mb=4000,
         runtime=15,
