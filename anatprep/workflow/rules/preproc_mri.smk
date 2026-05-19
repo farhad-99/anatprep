@@ -239,7 +239,7 @@ rule rigid_nlin_reg_mri_to_template:
             **inputs.subj_wildcards,
         ),
     params:
-        prefix=lambda wildcards, output: output.affine[: -len("0GenericAffine.mat")],
+        prefix=lambda wildcards, output: output.affine.removesuffix("0GenericAffine.mat"),
     output:
         affine=bids(
             root=root,
@@ -303,10 +303,11 @@ rule rigid_nlin_reg_mri_to_template:
         " --convergence [100x70x50x20,1e-6,10]"
         " --shrink-factors 8x4x2x1"
         " --smoothing-sigmas 3x2x1x0vox"
+        " --number-of-threads {threads}"
         " -v 1"
 
 
-rule all_tune_mri_mask:
+rule all_mri_brain_masks:
     input:
         inputs["mri"].expand(
             bids(
