@@ -139,7 +139,7 @@ rule register_to_mean:
         " --convergence [100x70x50x20,1e-6,10]"
         " --shrink-factors 8x4x2x1"
         " --smoothing-sigmas 3x2x1x0vox"
-        " --number-of-threads {threads}"
+        #" --number-of-threads {threads}"
         " -v 1"
 
 
@@ -209,7 +209,7 @@ rule register_atlas_to_template:
         " --convergence [100x70x50x20,1e-6,10]"
         " --shrink-factors 8x4x2x1"
         " --smoothing-sigmas 3x2x1x0vox"
-        " --number-of-threads {threads}"
+        #" --number-of-threads {threads}"
         " -v 1"
 
 
@@ -279,7 +279,7 @@ rule compose_subject_to_template:
         " -t {input.atlas_affine}"
         " -t {input.sub_warp}"
         " -t {input.sub_affine}"
-        " --number-of-threads {threads}"
+       # " --number-of-threads {threads}"
         " -v 1"
         " && "
         "antsApplyTransforms"
@@ -289,5 +289,5 @@ rule compose_subject_to_template:
         " -o {output.warped}"
         " -t {output.composite}"
         " --interpolation Linear"
-        " --number-of-threads {threads}"
+        #" --number-of-threads {threads}"
         " -v 1"
