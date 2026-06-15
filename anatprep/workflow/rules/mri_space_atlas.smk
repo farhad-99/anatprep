@@ -10,6 +10,9 @@ Workflow:
 """
 
 
+ruleorder: register_to_mean > rigid_nlin_reg_mri_to_template
+
+
 def get_all_preproc(wildcards=None):
     """Get all desc-preproc T2starw images across subjects/sessions."""
     return inputs["mri"].expand(
