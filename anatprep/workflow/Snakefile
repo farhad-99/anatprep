@@ -45,21 +45,12 @@ else:
 
 rule all:
     input:
-        # preproc outputs
+        # preproc outputs (desc-preproc feeds into register_to_mean)
         inputs["mri"].expand(
             bids(
                 root=root,
                 datatype="anat",
                 desc="preproc",
-                suffix=f"{mri_suffix}.nii.gz",
-                **inputs.subj_wildcards,
-            )
-        ),
-        inputs["mri"].expand(
-            bids(
-                root=root,
-                datatype="anat",
-                desc="brain",
                 suffix=f"{mri_suffix}.nii.gz",
                 **inputs.subj_wildcards,
             )
