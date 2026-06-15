@@ -10,7 +10,7 @@ Workflow:
 
 
 def get_all_warped(wildcards):
-    """Get all per-subject warped images for atlas construction."""
+    """Get all per-subject/session warped images for atlas construction."""
     return inputs["mri"].expand(
         bids(
             root=root,
@@ -19,7 +19,8 @@ def get_all_warped(wildcards):
             desc="warped",
             suffix=f"{mri_suffix}.nii.gz",
             **inputs.subj_wildcards,
-        )
+        ),
+        allow_missing=False,
     )
 
 
@@ -31,7 +32,13 @@ rule register_to_mean:
     """
     input:
         fixed=config["template_path"],
-        moving=inputs["mri"].path,
+        moving=bids(
+            root=root,
+            datatype="anat",
+            desc="preproc",
+            suffix=f"{mri_suffix}.nii.gz",
+            **inputs.subj_wildcards,
+        ),
     params:
         prefix=lambda wildcards, output: output.affine.removesuffix("0GenericAffine.mat"),
     output:
@@ -41,7 +48,7 @@ rule register_to_mean:
             from_=f"{mri_suffix}",
             to="mriatlas",
             suffix="0GenericAffine.mat",
-            **inputs["mri"].wildcards,
+            **inputs.subj_wildcards,
         ),
         warp=bids(
             root=root,
@@ -49,7 +56,7 @@ rule register_to_mean:
             from_=f"{mri_suffix}",
             to="mriatlas",
             suffix="1Warp.nii.gz",
-            **inputs["mri"].wildcards,
+            **inputs.subj_wildcards,
         ),
         invwarp=bids(
             root=root,
@@ -57,7 +64,7 @@ rule register_to_mean:
             from_=f"{mri_suffix}",
             to="mriatlas",
             suffix="1InverseWarp.nii.gz",
-            **inputs["mri"].wildcards,
+            **inputs.subj_wildcards,
         ),
         warped=bids(
             root=root,
@@ -65,7 +72,7 @@ rule register_to_mean:
             space="mriatlas",
             desc="warped",
             suffix=f"{mri_suffix}.nii.gz",
-            **inputs["mri"].wildcards,
+            **inputs.subj_wildcards,
         ),
     threads: workflow.cores
     resources:
@@ -179,7 +186,13 @@ rule compose_subject_to_template:
     warp and the subject image warped into template space.
     """
     input:
-        moving=inputs["mri"].path,
+        moving=bids(
+            root=root,
+            datatype="anat",
+            desc="preproc",
+            suffix=f"{mri_suffix}.nii.gz",
+            **inputs.subj_wildcards,
+        ),
         fixed=config["template_path_target"],
         sub_affine=bids(
             root=root,
@@ -187,7 +200,7 @@ rule compose_subject_to_template:
             from_=f"{mri_suffix}",
             to="mriatlas",
             suffix="0GenericAffine.mat",
-            **inputs["mri"].wildcards,
+            **inputs.subj_wildcards,
         ),
         sub_warp=bids(
             root=root,
@@ -195,7 +208,7 @@ rule compose_subject_to_template:
             from_=f"{mri_suffix}",
             to="mriatlas",
             suffix="1Warp.nii.gz",
-            **inputs["mri"].wildcards,
+            **inputs.subj_wildcards,
         ),
         atlas_affine=os.path.join(root, "mri-atlas", f"from-mriatlas_to-{target_template}_0GenericAffine.mat"),
         atlas_warp=os.path.join(root, "mri-atlas", f"from-mriatlas_to-{target_template}_1Warp.nii.gz"),
@@ -206,7 +219,7 @@ rule compose_subject_to_template:
             from_=f"{mri_suffix}",
             to=target_template,
             suffix="composite.h5",
-            **inputs["mri"].wildcards,
+            **inputs.subj_wildcards,
         ),
         warped=bids(
             root=root,
@@ -214,7 +227,7 @@ rule compose_subject_to_template:
             space=target_template,
             desc="deformwarped",
             suffix=f"{mri_suffix}.nii.gz",
-            **inputs["mri"].wildcards,
+            **inputs.subj_wildcards,
         ),
     threads: workflow.cores
     resources:

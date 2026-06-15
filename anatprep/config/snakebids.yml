@@ -13,16 +13,20 @@ pybids_inputs:
       suffix: 'T2starw'
       extension: 'nii.gz'
       datatype: 'anat'
-      desc: 'preproc'
     wildcards:
       - subject
       - session
+      - acquisition
+      - run
+      - reconstruction
+      - suffix
+      - extension
 
 
 #configuration for the command-line parameters to make available
 parse_args:
   --bids_dir:
-    help: "Path to the BIDS dataset directory"
+    help: "Path to the raw BIDS dataset directory"
     type: str
     required: True
 
@@ -45,6 +49,19 @@ parse_args:
     type: str
     required: True
 
+  --template_mri:
+    help: "Template to use for MRI registration to obtain brain mask"
+    default: MouseIn
+    choices:
+      - MouseIn
+      - DSURQE
+      - MBMv3
+      - turone
+
+  --mri_resample_percent:
+    help: "Resampling factor for multi-MRI averaging as a percent (default: %(default)s)"
+    default: 100
+
   --skip-bids-validation:
     help: |
       Skip validation of BIDS dataset. BIDS validation is performed by
@@ -62,4 +79,21 @@ output_dir: null
 target_template: ABAv3
 template_path: null
 template_path_target: null
-plugins.validator.skip: true
+template_mri: MouseIn
+mri_resample_percent: 100
+
+templates:
+  MouseIn:
+    anat: 'tpl-MouseIn/tpl-MouseIn_res-1_inv-1_MP2RAGE.nii.gz'
+    mask: 'tpl-MouseIn/tpl-MouseIn_res-1_desc-brain_mask.nii.gz'
+
+  MBMv3:
+    anat: 'tpl-MBMv3/tpl-MBMv3_T2w.nii.gz'
+    mask: 'tpl-MBMv3/tpl-MBMv3_desc-brain_mask.nii.gz'
+
+  turone:
+    anat: 'tpl-turone/tpl-turone_T2w.nii.gz'
+
+  DSURQE:
+    anat: '/nfs/khan/trainees/ffallahz/ki3/bids/tpl-DSURQE/tpl-DSURQE_anat.nii.gz'
+    mask: '/nfs/khan/trainees/ffallahz/ki3/bids/tpl-DSURQE/tpl-DSURQE_desc-brain_mask.nii.gz'

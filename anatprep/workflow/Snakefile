@@ -31,11 +31,40 @@ inputs = generate_inputs(
 )
 
 
-mri_suffix = "T2starw"
+if "mri" in inputs:
+    suffixes = inputs["mri"].entities["suffix"]
+    if len(suffixes) == 1:
+        mri_suffix = suffixes[0]
+    else:
+        raise ValueError(
+            f"More than one MRI suffix found, use --filter-mri to narrow your search: {suffixes}"
+        )
+else:
+    mri_suffix = "T2starw"
 
 
 rule all:
     input:
+        # preproc outputs
+        inputs["mri"].expand(
+            bids(
+                root=root,
+                datatype="anat",
+                desc="preproc",
+                suffix=f"{mri_suffix}.nii.gz",
+                **inputs.subj_wildcards,
+            )
+        ),
+        inputs["mri"].expand(
+            bids(
+                root=root,
+                datatype="anat",
+                desc="brain",
+                suffix=f"{mri_suffix}.nii.gz",
+                **inputs.subj_wildcards,
+            )
+        ),
+        # atlas outputs
         os.path.join(root, "mri-atlas", "mri-atlas.nii.gz"),
         os.path.join(root, "mri-atlas", f"from-mriatlas_to-{target_template}_0GenericAffine.mat"),
         os.path.join(root, "mri-atlas", f"from-mriatlas_to-{target_template}_1Warp.nii.gz"),
@@ -52,4 +81,7 @@ rule all:
         ),
 
 
+include: "rules/common.smk"
+include: "rules/import.smk"
+include: "rules/preproc_mri.smk"
 include: "rules/mri_space_atlas.smk"
