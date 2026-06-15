@@ -2,11 +2,13 @@
 MRI space atlas construction and subject-to-template registration.
 
 Workflow:
-1. compute_initial_mean    — Average all desc-preproc images into a first-pass mean.
-2. register_to_mean        — Register each subject/session T2starw to the initial mean.
-3. build_mri_atlas         — Average warped images into an mri-atlas template.
-4. register_atlas_to_template — Register mri-atlas to the target template (default: ABAv3).
-5. compose_subject_to_template — Compose subject→mri-atlas and mri-atlas→template transforms.
+1. rigid_to_reference      — Rigidly align every subject to the first (sorted) preproc image
+                             so that all images share a common space before averaging.
+2. compute_initial_mean    — Average all rigidly-aligned images into a coherent first-pass mean.
+3. register_to_mean        — Rigid+affine+SyN each subject to the initial mean (first pass).
+4. build_mri_atlas         — Average all SyN-warped images into the final mri-atlas.
+5. register_atlas_to_template — Register mri-atlas to the target template (default: ABAv3).
+6. compose_subject_to_template — Compose subject→mri-atlas and mri-atlas→template transforms.
 """
 
 
@@ -14,12 +16,34 @@ ruleorder: register_to_mean > rigid_nlin_reg_mri_to_template
 
 
 def get_all_preproc(wildcards=None):
-    """Get all desc-preproc T2starw images across subjects/sessions."""
+    """Get all desc-preproc T2starw images across subjects/sessions (sorted for determinism)."""
+    return sorted(
+        inputs["mri"].expand(
+            bids(
+                root=root,
+                datatype="anat",
+                desc="preproc",
+                suffix=f"{mri_suffix}.nii.gz",
+                **inputs.subj_wildcards,
+            ),
+            allow_missing=False,
+        )
+    )
+
+
+def get_reference_preproc(wildcards=None):
+    """Return the first sorted preproc image as the rigid-registration reference."""
+    return get_all_preproc()[0]
+
+
+def get_all_rigid_warped(wildcards=None):
+    """Get all rigidly-aligned images (input to compute_initial_mean)."""
     return inputs["mri"].expand(
         bids(
             root=root,
             datatype="anat",
-            desc="preproc",
+            space="mriref",
+            desc="rigidwarped",
             suffix=f"{mri_suffix}.nii.gz",
             **inputs.subj_wildcards,
         ),
@@ -28,7 +52,7 @@ def get_all_preproc(wildcards=None):
 
 
 def get_all_warped(wildcards=None):
-    """Get all per-subject/session warped images for atlas construction."""
+    """Get all SyN-warped images for atlas averaging."""
     return inputs["mri"].expand(
         bids(
             root=root,
@@ -42,10 +66,76 @@ def get_all_warped(wildcards=None):
     )
 
 
-rule compute_initial_mean:
-    """Average all desc-preproc T2starw images to create the first-pass mean target."""
+rule rigid_to_reference:
+    """Rigidly register each subject/session to the first sorted preproc image.
+
+    All sessions are in native scanner space so a rigid alignment to a shared
+    reference is required before averaging.  Uses Rigid+Affine only (no SyN)
+    for speed.  The reference subject registers to itself (identity result).
+    """
     input:
-        images=get_all_preproc,
+        fixed=get_reference_preproc,
+        moving=bids(
+            root=root,
+            datatype="anat",
+            desc="preproc",
+            suffix=f"{mri_suffix}.nii.gz",
+            **inputs.subj_wildcards,
+        ),
+    params:
+        prefix=lambda wildcards, output: output.affine.removesuffix("0GenericAffine.mat"),
+    output:
+        affine=temp(
+            bids(
+                root=root,
+                datatype="xfm",
+                from_=f"{mri_suffix}",
+                to="mriref",
+                suffix="0GenericAffine.mat",
+                **inputs.subj_wildcards,
+            )
+        ),
+        warped=bids(
+            root=root,
+            datatype="anat",
+            space="mriref",
+            desc="rigidwarped",
+            suffix=f"{mri_suffix}.nii.gz",
+            **inputs.subj_wildcards,
+        ),
+    threads: workflow.cores
+    resources:
+        mem_mb=8000,
+        runtime=30,
+    conda:
+        "../envs/ants.yaml"
+    shell:
+        "antsRegistration"
+        " --dimensionality 3"
+        " --float 0"
+        ' --output ["{params.prefix}","{output.warped}"]'
+        " --interpolation Linear"
+        " --use-histogram-matching 0"
+        " --winsorize-image-intensities [0.005,0.995]"
+        ' --initial-moving-transform ["{input.fixed}","{input.moving}",1]'
+        " --transform Rigid[0.1]"
+        ' --metric MI["{input.fixed}","{input.moving}",1,32,Regular,0.25]'
+        " --convergence [1000x500x250x100,1e-6,10]"
+        " --shrink-factors 8x4x2x1"
+        " --smoothing-sigmas 3x2x1x0vox"
+        " --transform Affine[0.1]"
+        ' --metric MI["{input.fixed}","{input.moving}",1,32,Regular,0.25]'
+        " --convergence [1000x500x250x100,1e-6,10]"
+        " --shrink-factors 8x4x2x1"
+        " --smoothing-sigmas 3x2x1x0vox"
+        " --number-of-threads {threads}"
+        " -v 1"
+
+
+rule compute_initial_mean:
+    """Average all rigidly-aligned images to create a coherent first-pass mean."""
+    input:
+        images=get_all_rigid_warped,
     output:
         mean=os.path.join(root, "mri-atlas", "initial_mean.nii.gz"),
     threads: 1
@@ -56,14 +146,14 @@ rule compute_initial_mean:
         "../envs/ants.yaml"
     shell:
         "mkdir -p $(dirname {output.mean}) && "
-        "AverageImages 3 {output.mean} 0 {input.images}"
+        "AverageImages 3 {output.mean} 1 {input.images}"
 
 
 rule register_to_mean:
-    """Register each subject/session T2starw to the computed initial mean (first pass).
+    """Rigid+affine+SyN registration of each subject to the initial mean (first pass).
 
-    Produces per-subject affine and warp transforms, plus the warped image in
-    mri-atlas space.
+    Produces per-subject affine and SyN warp transforms plus the warped image
+    in mri-atlas space.
     """
     input:
         fixed=os.path.join(root, "mri-atlas", "initial_mean.nii.gz"),
@@ -144,11 +234,7 @@ rule register_to_mean:
 
 
 rule build_mri_atlas:
-    """Average all warped images into an mri-atlas template.
-
-    Uses ANTs AverageImages to produce a mean image across all warped
-    subject/session images.
-    """
+    """Average all SyN-warped images into the final mri-atlas template."""
     input:
         warped=get_all_warped,
     output:
