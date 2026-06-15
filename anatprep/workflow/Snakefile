@@ -1,6 +1,6 @@
 import os
 
-from snakebids import bids, generate_inputs, get_wildcard_constraints, set_bids_spec
+from snakebids import bids, generate_inputs, set_bids_spec
 import snakebids
 
 # update v15 spec to add template entity
@@ -12,14 +12,13 @@ spec.insert(0, tpl_spec)
 set_bids_spec(spec)
 
 
-configfile: "config/snakebids.yml"
+configfile: os.path.join(workflow.basedir, "..", "config", "snakebids.yml")
 
 
-# use expandvars so we can use e.g. '$SLURM_TMPDIR'
-root = os.path.expandvars(config["root"])
+root = os.path.expandvars(config["output_dir"])
+target_template = config.get("target_template", "ABAv3")
 
 
-# Get input wildcards
 inputs = generate_inputs(
     bids_dir=config["bids_dir"],
     pybids_inputs=config["pybids_inputs"],
@@ -44,45 +43,36 @@ else:
     mri_suffix = "T2starw"
 
 
-
-
-template = config["templates"][config["template"]]
-
-# atlas segmentations to use
-
-if config["atlas_segs"] is None:
-    atlas_segs = template.get("default_segs", template["atlases"].keys())
-else:
-    atlas_segs = []
-    for seg in config["atlas_segs"]:
-        if seg not in template["atlases"]:
-            raise ValueError(
-                f"Chosen segmentation {seg} was not found in the template {template}"
-            )
-        else:
-            atlas_segs.append(seg)
-
-
-#preproc mri and brainmask
 rule all:
     input:
+        # preproc outputs (desc-preproc feeds into register_to_mean)
         inputs["mri"].expand(
             bids(
-            root=root,
-            datatype="anat",
-            desc="preproc",
-            suffix=f"{mri_suffix}.nii.gz",
-            **inputs.subj_wildcards,
-        )),
+                root=root,
+                datatype="anat",
+                desc="preproc",
+                suffix=f"{mri_suffix}.nii.gz",
+                **inputs.subj_wildcards,
+            )
+        ),
+        # atlas outputs
+        os.path.join(root, "mri-atlas", "mri-atlas.nii.gz"),
+        os.path.join(root, "mri-atlas", f"from-mriatlas_to-{target_template}_0GenericAffine.mat"),
+        os.path.join(root, "mri-atlas", f"from-mriatlas_to-{target_template}_1Warp.nii.gz"),
+        os.path.join(root, "mri-atlas", f"from-mriatlas_to-{target_template}_1InverseWarp.nii.gz"),
         inputs["mri"].expand(
             bids(
-            root=root,
-            datatype="anat",
-            desc="brain",
-            suffix=f"{mri_suffix}.nii.gz",
-            **inputs.subj_wildcards,
-        ))
+                root=root,
+                datatype="anat",
+                space=target_template,
+                desc="deformwarped",
+                suffix=f"{mri_suffix}.nii.gz",
+                **inputs.subj_wildcards,
+            )
+        ),
+
 
 include: "rules/common.smk"
 include: "rules/import.smk"
 include: "rules/preproc_mri.smk"
+include: "rules/mri_space_atlas.smk"
