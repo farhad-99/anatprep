@@ -1,0 +1,9 @@
+# Configuration for within-subject longitudinal session averaging workflow.
+
+bids_dir: null
+output_dir: null
+
+# Modality map: wildcard value -> input filename suffix (after sub-X_ses-Y_)
+modalities:
+  acq-TOF_run-1_angio: "acq-TOF_run-1_angio"
+  run-1_T2w: "run-1_T2w"
