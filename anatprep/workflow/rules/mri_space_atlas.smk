@@ -218,7 +218,7 @@ rule compose_subject_to_template:
             datatype="xfm",
             from_=f"{mri_suffix}",
             to=target_template,
-            suffix="composite.h5",
+            suffix="composite.nii.gz",
             **inputs.subj_wildcards,
         ),
         warped=bids(
@@ -238,13 +238,13 @@ rule compose_subject_to_template:
     shell:
         "antsApplyTransforms"
         " -d 3"
-        " -i {input.moving}"
         " -r {input.fixed}"
-        " -o Linear[{output.composite}]"
+        " -o [{output.composite},1]"
         " -t {input.atlas_warp}"
         " -t {input.atlas_affine}"
         " -t {input.sub_warp}"
         " -t {input.sub_affine}"
+        " --number-of-threads {threads}"
         " -v 1"
         " && "
         "antsApplyTransforms"
@@ -254,4 +254,5 @@ rule compose_subject_to_template:
         " -o {output.warped}"
         " -t {output.composite}"
         " --interpolation Linear"
+        " --number-of-threads {threads}"
         " -v 1"
