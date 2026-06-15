@@ -12,7 +12,7 @@ spec.insert(0, tpl_spec)
 set_bids_spec(spec)
 
 
-configfile: "config/snakebids.yml"
+configfile: os.path.join(workflow.basedir, "..", "config", "snakebids.yml")
 
 
 root = os.path.expandvars(config["output_dir"])
