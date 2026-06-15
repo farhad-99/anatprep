@@ -2,14 +2,29 @@
 MRI space atlas construction and subject-to-template registration.
 
 Workflow:
-1. register_to_mean        — Register each subject/session T2starw to an initial mean image.
-2. build_mri_atlas         — Average warped images into an mri-atlas template.
-3. register_atlas_to_template — Register mri-atlas to the target template (default: ABAv3).
-4. compose_subject_to_template — Compose subject→mri-atlas and mri-atlas→template transforms.
+1. compute_initial_mean    — Average all desc-preproc images into a first-pass mean.
+2. register_to_mean        — Register each subject/session T2starw to the initial mean.
+3. build_mri_atlas         — Average warped images into an mri-atlas template.
+4. register_atlas_to_template — Register mri-atlas to the target template (default: ABAv3).
+5. compose_subject_to_template — Compose subject→mri-atlas and mri-atlas→template transforms.
 """
 
 
-def get_all_warped(wildcards):
+def get_all_preproc(wildcards=None):
+    """Get all desc-preproc T2starw images across subjects/sessions."""
+    return inputs["mri"].expand(
+        bids(
+            root=root,
+            datatype="anat",
+            desc="preproc",
+            suffix=f"{mri_suffix}.nii.gz",
+            **inputs.subj_wildcards,
+        ),
+        allow_missing=False,
+    )
+
+
+def get_all_warped(wildcards=None):
     """Get all per-subject/session warped images for atlas construction."""
     return inputs["mri"].expand(
         bids(
@@ -24,14 +39,31 @@ def get_all_warped(wildcards):
     )
 
 
+rule compute_initial_mean:
+    """Average all desc-preproc T2starw images to create the first-pass mean target."""
+    input:
+        images=get_all_preproc,
+    output:
+        mean=os.path.join(root, "mri-atlas", "initial_mean.nii.gz"),
+    threads: 1
+    resources:
+        mem_mb=4000,
+        runtime=30,
+    conda:
+        "../envs/ants.yaml"
+    shell:
+        "mkdir -p $(dirname {output.mean}) && "
+        "AverageImages 3 {output.mean} 0 {input.images}"
+
+
 rule register_to_mean:
-    """Register each subject/session T2starw to an initial mean image (first pass).
+    """Register each subject/session T2starw to the computed initial mean (first pass).
 
     Produces per-subject affine and warp transforms, plus the warped image in
-    mri-atlas space.  The initial mean is supplied via config['template_path'].
+    mri-atlas space.
     """
     input:
-        fixed=config["template_path"],
+        fixed=os.path.join(root, "mri-atlas", "initial_mean.nii.gz"),
         moving=bids(
             root=root,
             datatype="anat",
