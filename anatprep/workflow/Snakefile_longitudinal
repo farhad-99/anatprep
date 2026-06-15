@@ -1,0 +1,50 @@
+"""
+Within-subject longitudinal session averaging workflow.
+
+Implements trim → subject-template → session coregistration for two MRI
+modalities: TOF angiography and T2w.
+"""
+
+import os
+import glob
+
+
+configfile: os.path.join(workflow.basedir, "..", "config", "longitudinal_config.yml")
+
+
+bids_dir = config["bids_dir"]
+output_dir = config["output_dir"]
+
+# Modality wildcard values (keys of the config dict)
+modalities = list(config["modalities"].keys())
+
+
+def _discover_subject_sessions(bids_dir):
+    """Return dict mapping subject -> sorted list of sessions by globbing BIDS dir."""
+    subject_sessions = {}
+    for ses_path in sorted(
+        glob.glob(os.path.join(bids_dir, "sub-*", "ses-*", "anat"))
+    ):
+        parts = ses_path.split(os.sep)
+        sub = parts[-3].replace("sub-", "")
+        ses = parts[-2].replace("ses-", "")
+        subject_sessions.setdefault(sub, []).append(ses)
+    return subject_sessions
+
+
+subject_sessions = _discover_subject_sessions(bids_dir)
+subjects = list(subject_sessions.keys())
+
+
+def get_sessions(subject):
+    return subject_sessions.get(subject, [])
+
+
+wildcard_constraints:
+    modality="|".join(modalities),
+
+
+include: "rules/longitudinal_trim.smk"
+include: "rules/longitudinal_template.smk"
+include: "rules/longitudinal_coreg.smk"
+include: "rules/longitudinal_all.smk"
