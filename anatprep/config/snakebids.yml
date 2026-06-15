@@ -13,7 +13,7 @@ pybids_inputs:
       suffix: 'T2starw'
       extension: 'nii.gz'
       datatype: 'anat'
-      reconstruction: ~       # exclude rec- files; keep only echo- variants
+      reconstruction: false   # exclude rec- files; keep only echo- variants
     wildcards:
       - subject
       - session
