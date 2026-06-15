@@ -62,3 +62,4 @@ output_dir: null
 target_template: ABAv3
 template_path: null
 template_path_target: null
+plugins.validator.skip: true
