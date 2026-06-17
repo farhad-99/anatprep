@@ -130,7 +130,7 @@ rule register_mri_to_first:
                 **inputs.subj_wildcards,
             )
         ),
-    threads: 48 
+    threads: workflow.cores
     resources:
         mem_mb=8000,
         runtime=10,
@@ -172,7 +172,7 @@ rule resample_mri_to_first:
                 **inputs.subj_wildcards,
             )
         ),
-    threads: 48 #
+    threads: workflow.cores
     conda:
         "../envs/c3d.yaml"
     resources:
@@ -209,7 +209,7 @@ rule average_mri:
             suffix=f"{mri_suffix}.nii.gz",
             **inputs.subj_wildcards,
         ),
-    threads: 48 #
+    threads: workflow.cores
     resources:
         mem_mb=1500,
         runtime=15,
@@ -223,14 +223,11 @@ rule average_mri:
 
 
 rule rigid_nlin_reg_mri_to_template:
-    """Initial unmasked MRI to unmasked template MRI using rigid + 
-    deformable registration.
-    
-    Performs initial rigid (6 DOF) alignment followed by deformable
-    registration to align non-brain-masked  MRI with similarly
-    non-brain-masked MRI, so that the template brain mask can be
-    propagated. Note: this step could be replaced by a ML-based 
-    brain-masking if a suitable model is found/trained.
+    """Initial unmasked MRI to unmasked template MRI using ANTs registration.
+
+    Performs rigid, affine, and SyN deformable registration to align
+    non-brain-masked MRI with the template so that the template brain
+    mask can be propagated to native space.
     """
     input:
         template=bids(root=root, template="{template}", suffix="anat.nii.gz"),
@@ -241,96 +238,76 @@ rule rigid_nlin_reg_mri_to_template:
             suffix=f"{mri_suffix}.nii.gz",
             **inputs.subj_wildcards,
         ),
-        # subject=bids(
-        #     root=root,
-        #     datatype="anat",
-        #     desc="preprocRAS",
-        #     suffix=f"{mri_suffix}.nii.gz",
-        #     **inputs.subj_wildcards,
-        # ),
     params:
-        iters="{iters}",  #"100x50x50",
-        metric="NCC {radius}",  #3x3x3",
-        sigma1="{gradsigma}vox",  #3
-        sigma2="{warpsigma}vox",  #2
+        prefix=lambda wildcards, output: output.affine.removesuffix("0GenericAffine.mat"),
     output:
-        xfm_ras=#temp(
-            bids(
-                root=root,
-                datatype="xfm",
-                from_=f"{mri_suffix}",
-                to="{template}",
-                type_="ras",
-                desc="rigid",
-                suffix="xfm.txt",
-                iters="{iters}",
-                radius="{radius}",
-                gradsigma="{gradsigma}",
-                warpsigma="{warpsigma}",
-                **inputs.subj_wildcards,
-            #)
+        affine=bids(
+            root=root,
+            datatype="xfm",
+            from_=f"{mri_suffix}",
+            to="{template}",
+            suffix="0GenericAffine.mat",
+            **inputs.subj_wildcards,
         ),
-        warp=#temp(
-            bids(
-                root=root,
-                datatype="xfm",
-                from_=f"{mri_suffix}",
-                to="{template}",
-                suffix="warp.nii.gz",
-                iters="{iters}",
-                radius="{radius}",
-                gradsigma="{gradsigma}",
-                warpsigma="{warpsigma}",
-                **inputs.subj_wildcards,
-            #)
+        warp=bids(
+            root=root,
+            datatype="xfm",
+            from_=f"{mri_suffix}",
+            to="{template}",
+            suffix="1Warp.nii.gz",
+            **inputs.subj_wildcards,
         ),
-        invwarp=#temp(
-            bids(
-                root=root,
-                datatype="xfm",
-                from_="{template}",
-                to=f"{mri_suffix}",
-                suffix="warp.nii.gz",
-                iters="{iters}",
-                radius="{radius}",
-                gradsigma="{gradsigma}",
-                warpsigma="{warpsigma}",
-                **inputs.subj_wildcards,
-            #)
+        invwarp=bids(
+            root=root,
+            datatype="xfm",
+            from_=f"{mri_suffix}",
+            to="{template}",
+            suffix="1InverseWarp.nii.gz",
+            **inputs.subj_wildcards,
         ),
-        warped=#temp(
-            bids(
-                root=root,
-                datatype="xfm",
-                space="{template}",
-                desc="deformwarped",
-                suffix=f"{mri_suffix}.nii.gz",
-                iters="{iters}",
-                radius="{radius}",
-                gradsigma="{gradsigma}",
-                warpsigma="{warpsigma}",
-                **inputs.subj_wildcards,
-            #)
+        warped=bids(
+            root=root,
+            datatype="xfm",
+            space="{template}",
+            desc="deformwarped",
+            suffix=f"{mri_suffix}.nii.gz",
+            **inputs.subj_wildcards,
         ),
-    threads: 48
+    threads: workflow.cores
     resources:
-        mem_mb=1500,
-        runtime=15,
+        mem_mb=8000,
+        runtime=60,
     conda:
-        "../envs/c3d.yaml"
+        "../envs/ants.yaml"
     shell:
-        "greedy -threads {threads} -d 3 -i {input.template} {input.subject} "
-        " -a -dof 6 -ia-image-centers -m {params.metric} -o {output.xfm_ras} && "
-        "greedy -threads {threads} -d 3 -i {input.template} {input.subject} "
-        " -it {output.xfm_ras} -m {params.metric} "
-        " -oinv {output.invwarp} "
-        " -o {output.warp} -n {params.iters} -s {params.sigma1} {params.sigma2} && "
-        " greedy -threads {threads} -d 3 -rf {input.template} "
-        "  -rm {input.subject} {output.warped} "
-        "  -r {output.warp} {output.xfm_ras} "
+        "antsRegistration"
+        " --dimensionality 3"
+        " --float 0"
+        ' --output ["{params.prefix}","{output.warped}"]'
+        " --interpolation Linear"
+        " --use-histogram-matching 0"
+        " --winsorize-image-intensities [0.005,0.995]"
+        ' --initial-moving-transform ["{input.template}","{input.subject}",1]'
+        " --transform Rigid[0.1]"
+        ' --metric MI["{input.template}","{input.subject}",1,32,Regular,0.25]'
+        " --convergence [1000x500x250x100,1e-6,10]"
+        " --shrink-factors 8x4x2x1"
+        " --smoothing-sigmas 3x2x1x0vox"
+        " --transform Affine[0.1]"
+        ' --metric MI["{input.template}","{input.subject}",1,32,Regular,0.25]'
+        " --convergence [1000x500x250x100,1e-6,10]"
+        " --shrink-factors 8x4x2x1"
+        " --smoothing-sigmas 3x2x1x0vox"
+        " --transform SyN[0.1,3,0]"
+        ' --metric CC["{input.template}","{input.subject}",1,4]'
+        " --convergence [100x70x50x20,1e-6,10]"
+        " --shrink-factors 8x4x2x1"
+        " --smoothing-sigmas 3x2x1x0vox"
+        " --number-of-threads {threads}"
+        " -v 1"
 
 
-rule all_tune_mri_mask:
+rule all_mri_brain_masks:
     input:
         inputs["mri"].expand(
             bids(
@@ -338,16 +315,8 @@ rule all_tune_mri_mask:
                 datatype="anat",
                 desc="brain",
                 suffix="mask.nii.gz",
-                iters="{iters}",
-                radius="{radius}",
-                gradsigma="{gradsigma}",
-                warpsigma="{warpsigma}",
                 **inputs.subj_wildcards,
             ),
-            iters="100x50x50",
-            gradsigma=range(3, 6),
-            warpsigma=range(3, 6),
-            radius=[f"{i}x{i}x{i}" for i in range(2, 5)],
         ),
 
 
@@ -366,59 +335,45 @@ rule transform_template_mask_to_mri:
             suffix=f"{mri_suffix}.nii.gz",
             **inputs.subj_wildcards,
         ),
-        xfm_ras=bids(
+        affine=bids(
             root=root,
             datatype="xfm",
             from_=f"{mri_suffix}",
             to=config["template_mri"],
-            type_="ras",
-            desc="rigid",
-            suffix="xfm.txt",
-            iters="{iters}",
-            radius="{radius}",
-            gradsigma="{gradsigma}",
-            warpsigma="{warpsigma}",
+            suffix="0GenericAffine.mat",
             **inputs.subj_wildcards,
         ),
         invwarp=bids(
             root=root,
             datatype="xfm",
-            from_=config["template_mri"],
-            to=f"{mri_suffix}",
-            suffix="warp.nii.gz",
-            iters="{iters}",
-            radius="{radius}",
-            gradsigma="{gradsigma}",
-            warpsigma="{warpsigma}",
+            from_=f"{mri_suffix}",
+            to=config["template_mri"],
+            suffix="1InverseWarp.nii.gz",
             **inputs.subj_wildcards,
         ),
     output:
-        mask=#temp(
-            bids(
-                root=root,
-                datatype="anat",
-                desc="brain",
-                suffix="mask.nii.gz",
-                iters="{iters}",
-                radius="{radius}",
-                gradsigma="{gradsigma}",
-                warpsigma="{warpsigma}",
-                **inputs.subj_wildcards,
-            #)
+        mask=bids(
+            root=root,
+            datatype="anat",
+            desc="brain",
+            suffix="mask.nii.gz",
+            **inputs.subj_wildcards,
         ),
-    shadow:
-        "minimal"
-    threads: 48
+    threads: workflow.cores
     resources:
-        mem_mb=1500,
+        mem_mb=4000,
         runtime=15,
     conda:
-        "../envs/c3d.yaml"
+        "../envs/ants.yaml"
     shell:
-        " c3d_affine_tool {input.xfm_ras} -inv -o inv_rigid.txt && "
-        " greedy -threads {threads} -d 3 -ri NN -rf {input.ref} "
-        "  -rm {input.mask} {output.mask} "
-        "  -r inv_rigid.txt {input.invwarp}"
+        "antsApplyTransforms"
+        " -d 3"
+        " -i {input.mask}"
+        " -r {input.ref}"
+        " -o {output.mask}"
+        " -n NearestNeighbor"
+        " -t [{input.affine},1]"
+        " -t {input.invwarp}"
 
 
 rule apply_mri_brain_mask:
@@ -435,10 +390,6 @@ rule apply_mri_brain_mask:
             datatype="anat",
             desc="brain",
             suffix="mask.nii.gz",
-            iters=config["reg_mri"]["rigidgreedy"]["iters"],
-            radius=config["reg_mri"]["rigidgreedy"]["radius"],
-            gradsigma=config["reg_mri"]["rigidgreedy"]["gradsigma"],
-            warpsigma=config["reg_mri"]["rigidgreedy"]["warpsigma"],
             **inputs.subj_wildcards,
         ),
     output:
